@@ -1,24 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="stylesheet.css">
-    </link>
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="stylesheet.css" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <title>Timer Manager</title>
 </head>
 
 <body>
-    <h1>Timer Manager</h1>
-
+  <h1 style="text-align: center">Timer Manager</h1>
+  <div class="main-content">
     <div class="container">
-        <div class="grid-item">
-            <label for="bits">Seconds per 100 bits</label>
-            <input id="bits" placeholder="time in seconds">
-        </div>
+      <div class="grid-item">
+        <label for="bits">Seconds per 100 bits</label>
+        <input id="bits" placeholder="time in seconds" type="number"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      </div>
+      <div class="grid-item">
+        <label for="subs">Seconds per sub</label>
+        <input id="subs" placeholder="time in seconds" type="number" />
+      </div>
+      <div class="grid-item">
+        <label for="donations">Seconds per $1 (donation)</label>
+        <input id="donations" placeholder="time in seconds" type="number" />
+      </div>
     </div>
-
+  </div>
+  <div class="server-status">
+    <span>
+      Backend Status:
+      <span id="status" style="margin-left: 0px">Disconnected</span>
+    </span>
+    <input type="text" placeholder="Enter message" id="message-box" />
+    <button id="send-message">Send Message</button>
+  </div>
+  <script src="module.js"></script>
 </body>
 
 </html>
