@@ -12,6 +12,7 @@ import (
 
 const configPath = "config.json"
 
+var timeRemaining int = 0
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
@@ -83,15 +84,18 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 			var file *os.File = nil
 			if file, err = os.OpenFile(configPath, os.O_CREATE, os.ModePerm); err != nil {
 				log.Println("Error opening config file: ", err)
+				conn.WriteJSON((Message{Type: "status", Reason: "Error opening config file"}))
 				break
 			}
 			encoder := json.NewEncoder(file)
 			if err := encoder.Encode(s.config); err != nil {
 				log.Println("Error writing config file: ", err)
+				conn.WriteJSON((Message{Type: "status", Reason: "Error writing to config file"}))
 				break
 			}
 			s.mu.Unlock()
 			log.Printf("Config updated: %+v\n", s.config)
+			conn.WriteJSON((Message{Type: "status", Reason: "true"}))
 		}
 	}
 }

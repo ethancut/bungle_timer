@@ -7,6 +7,7 @@ const settingsElements = [
 ];
 const values = { bits: 0, subs: 0, donations: 0 };
 const keys = ['bits', 'subs', 'donations'];
+const statusElement = document.getElementById('submit-status');
 
 let websocket = null;
 let reconnectDelay = 1000;
@@ -15,6 +16,7 @@ function isNumeric(str) {
     if (typeof str != "string") return false;
     return !isNaN(str) && !isNaN(parseFloat(str));
 }
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function updateConfig(msg) {
     values.bits = msg.bits;
@@ -57,6 +59,19 @@ function pushConfig() {
     }
 }
 
+async function statusNotify(msg) {
+    if (msg.reason == 'true') {
+        statusElement.style.color = "green"
+        statusElement.textContent = "Saved Successfully"
+        await sleep(2000);
+        statusElement.textContent = ""
+    } else {
+        statusElement.style.color = "red"
+        statusElement.textContent = msg.reason
+        await sleep(5000);
+        statusElement.textContent = ""
+    }
+}
 
 
 function connect() {
@@ -76,6 +91,8 @@ function connect() {
 
         if (msg.type == "config") {
             updateConfig(msg)
+        } else if (msg.type == "status") {
+            statusNotify(msg)
         }
     });
     websocket.addEventListener('close', (event) => {

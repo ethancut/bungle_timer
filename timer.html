@@ -27,9 +27,11 @@
         <label for="donations">Seconds per $1 (donation)</label>
         <input id="donations" placeholder="time in seconds" type="number"
           oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+
       </div>
     </div>
     <button id="submit-config" class="button-4">Save</button>
+    <div id="submit-status"></div>
   </div>
   <div class="server-status">
     <span>
