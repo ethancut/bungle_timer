@@ -16,17 +16,20 @@
       <div class="grid-item">
         <label for="bits">Seconds per 100 bits</label>
         <input id="bits" placeholder="time in seconds" type="number"
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+          oninput="this.value = this.value.replace(/[^0-9]/g, '') " />
       </div>
       <div class="grid-item">
         <label for="subs">Seconds per sub</label>
-        <input id="subs" placeholder="time in seconds" type="number" />
+        <input id="subs" placeholder="time in seconds" type="number"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
       </div>
       <div class="grid-item">
         <label for="donations">Seconds per $1 (donation)</label>
-        <input id="donations" placeholder="time in seconds" type="number" />
+        <input id="donations" placeholder="time in seconds" type="number"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
       </div>
     </div>
+    <button id="submit-config" class="button-4">Save</button>
   </div>
   <div class="server-status">
     <span>
@@ -34,7 +37,7 @@
       <span id="status" style="margin-left: 0px">Disconnected</span>
     </span>
     <input type="text" placeholder="Enter message" id="message-box" />
-    <button id="send-message">Send Message</button>
+    <button id="send-message" class="button-4">Send Message</button>
   </div>
   <script src="module.js"></script>
 </body>

@@ -1,4 +1,4 @@
-const wsUri = "ws://localhost:8080";
+const wsUri = "ws://localhost:8080/ws/settings";
 
 const settingsElements = [
     document.getElementById('bits'),
@@ -8,12 +8,35 @@ const settingsElements = [
 const values = { bits: 0, subs: 0, donations: 0 };
 const keys = ['bits', 'subs', 'donations'];
 
+let websocket = null;
+let reconnectDelay = 1000;
+const MAX_RECONNECT_DELAY = 10000;
 function isNumeric(str) {
     if (typeof str != "string") return false;
     return !isNaN(str) && !isNaN(parseFloat(str));
 }
 
+function updateConfig(msg) {
+    values.bits = msg.bits;
+    values.subs = msg.subs;
+    values.donations = msg.donations;
+    settingsElements[0].value = msg.bits;
+    settingsElements[1].value = msg.subs;
+    settingsElements[2].value = msg.donations;
+    validateElements();
+}
+
+
+
 function initTimer() {
+
+    connect();
+    //TODO: populate existing values
+    document.getElementById('send-message').addEventListener("click", (event) => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(document.getElementById('message-box').value);
+        }
+    });
 
     settingsElements.forEach((element, index) => {
         element.addEventListener('input', (event) => {
@@ -22,30 +45,53 @@ function initTimer() {
             validateElements();
         });
     });
+    document.getElementById('submit-config').addEventListener('click', (event) => {
+        pushConfig();
+    })
 
-    //TODO: populate existing values
-    const websocket = new WebSocket(wsUri);
-    let messagebox = document.getElementById('message-box');
+    validateElements();
+}
+function pushConfig() {
+    if (websocket.readyState == WebSocket.OPEN) {
+        websocket.send(JSON.stringify({ type: 'config', ...values }))
+    }
+}
+
+
+
+function connect() {
+    websocket = new WebSocket(wsUri);
+    const statusEl = document.getElementById('status');
     websocket.addEventListener('open', (event) => {
         console.log("Connected to WebSocket server");
         document.getElementById('status').textContent = "Connected";
     });
+    websocket.addEventListener('message', (event) => {
+        let msg;
+        try { msg = JSON.parse(event.data); }
+        catch (err) {
+            console.error("Bad WS message:", event.data, err);
+            return;
+        }
 
-    document.getElementById('send-message').addEventListener("click", (event) => {
-        websocket.send(messagebox.value);
+        if (msg.type == "config") {
+            updateConfig(msg)
+        }
     });
-    websocket.addEventListener('message', (message) => {
-        console.log("RECEIVED: ", message.data);
-    });
-
     websocket.addEventListener('close', (event) => {
         document.getElementById('status').textContent = "Disconnected";
+        scheduleReconnect();
     });
     websocket.addEventListener('error', (event) => {
         console.log("Websocket error:", event);
     });
-
-    validateElements();
+}
+function scheduleReconnect() {
+    setTimeout(() => {
+        console.log(`reconnecting (delay ${reconnectDelay}ms)`);
+        connect();
+        reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+    }, reconnectDelay);
 }
 function validateElements() {
     for (const element of settingsElements) {
