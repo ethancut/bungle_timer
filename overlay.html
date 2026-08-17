@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Overlay Timer</title>
+    <style>
+        body {
+            background-color: transparent;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #timer {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 80px;
+            color: #ffffff;
+            text-shadow: 3px 3px 0px #000000, -1px -1px 0px #000000, 1px -1px 0px #000000, -1px 1px 0px #000000;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+        }
+
+        #status {
+            position: fixed;
+            margin-top: 40px;
+            font-size: 20px;
+            color: red;
+            font-family: 'Arial Black', sans-serif;
+            -webkit-text-stroke: #000000 0.5px;
+
+        }
+    </style>
+</head>
+
+<body>
+    <div id="timer">00:00:00</div>
+    <div id="status">Disconnected</div>
+
+    <script src="overlay.js"></script>
+</body>
+
+</html>
