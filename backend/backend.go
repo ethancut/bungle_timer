@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 const configPath = "config.json"
 
-var timeRemaining int = 0
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
@@ -48,19 +48,44 @@ func (s *State) sendTo(conn *websocket.Conn, msg Message) {
 		conn.Close()
 	}
 }
+func (s *State) overlayHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Upgrade error: ", err)
+		return
+	}
+	s.mu.Lock()
+	s.overlayConn = conn
+	s.mu.Unlock()
 
+	defer func() {
+		log.Println("Closing overlay websocket")
+		s.mu.Lock()
+		if s.overlayConn == conn {
+			s.overlayConn = nil
+		}
+		s.mu.Unlock()
+		conn.Close()
+	}()
+	for {
+		var msg Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			log.Println("Message read error", err)
+			continue
+		}
+	}
+}
 func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade error: ", err)
+		return
 	}
 	s.mu.Lock()
 	s.settingsConn = conn
 	cfg := s.config
-	cfg.Bits = 1
-	s.mu.Unlock()
-
 	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Donations: cfg.Donations})
+	s.mu.Unlock()
 
 	defer func() {
 		log.Println("Closing settingspage websocket")
@@ -74,7 +99,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			log.Println("Settings read error", err)
+			log.Println("Message read error", err)
 			break
 		}
 		switch msg.Type {
@@ -96,14 +121,62 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 			s.mu.Unlock()
 			log.Printf("Config updated: %+v\n", s.config)
 			conn.WriteJSON((Message{Type: "status", Reason: "true"}))
+
+		case "add":
+			s.addTime(msg.Seconds)
+
 		}
 	}
+}
+func (s *State) getConfig() {
+	file, err := os.Open(configPath)
+	if err != nil {
+		log.Println("Error reading config file", err)
+		return
+	}
+	defer file.Close()
+
+	var config Config
+	decoder := json.NewDecoder(file)
+	if err = decoder.Decode(&config); err != nil {
+		log.Println("Error decoding config file ", err)
+	}
+	s.config = config
+}
+func (s *State) runTimer() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.mu.Lock()
+		if s.remaining > 0 {
+			s.remaining--
+			remaining := s.remaining
+			conn := s.overlayConn
+			s.mu.Unlock()
+
+			s.sendTo(conn, Message{Type: "timer", Remaining: remaining})
+		} else {
+			s.mu.Unlock()
+		}
+	}
+}
+func (s *State) addTime(seconds int) {
+	s.mu.Lock()
+	s.remaining += seconds
+	remaining := s.remaining
+	conn := s.overlayConn
+	s.mu.Unlock()
+	s.sendTo(conn, Message{Type: "timer", Remaining: remaining})
 }
 func main() {
 
 	state := &State{}
-
+	state.getConfig()
 	http.HandleFunc("/ws/settings", state.settingsHandler)
+	http.HandleFunc("/ws/timer", state.overlayHandler)
+
+	go state.runTimer()
 	log.Print("Starting server")
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }
