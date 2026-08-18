@@ -30,18 +30,21 @@
 
       </div>
     </div>
-    <button id="submit-config" class="button-4">Save</button>
     <div id="submit-status"></div>
+    <button id="submit-config" class="button-4">Save</button>
+    <button id="pause-timer" class="button-4">Pause Timer</button>
   </div>
   <div class="server-status">
+    <h4>Add Time Manually</h4>
+    <input type="text" placeholder="Enter time (seconds)" id="time-box" type="number"
+      oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+    <button id="add-time" class="button-4">Add Time</button>
     <span>
       Backend Status:
       <span id="status" style="margin-left: 0px">Disconnected</span>
     </span>
-    <input type="text" placeholder="Enter message" id="message-box" />
-    <button id="send-message" class="button-4">Send Message</button>
   </div>
-  <script src="module.js"></script>
+  <script src="settings.js"></script>
 </body>
 
 </html>

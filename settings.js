@@ -8,7 +8,8 @@ const settingsElements = [
 const values = { bits: 0, subs: 0, donations: 0 };
 const keys = ['bits', 'subs', 'donations'];
 const statusElement = document.getElementById('submit-status');
-
+const timeEntryElement = document.getElementById('time-box');
+const pauseElement = document.getElementById('pause-timer');
 let websocket = null;
 let reconnectDelay = 1000;
 const MAX_RECONNECT_DELAY = 10000;
@@ -33,13 +34,15 @@ function updateConfig(msg) {
 function initTimer() {
 
     connect();
-    //TODO: populate existing values
-    document.getElementById('send-message').addEventListener("click", (event) => {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-            websocket.send(document.getElementById('message-box').value);
+    document.getElementById('add-time').addEventListener("click", (event) => {
+        const seconds = parseInt(timeEntryElement.value, 10)
+        if (websocket && websocket.readyState === WebSocket.OPEN && !isNaN(seconds)) {
+            websocket.send(JSON.stringify({ type: "add", seconds: seconds }));
         }
     });
-
+    pauseElement.addEventListener("click", (event) => {
+        websocket.send(JSON.stringify({ type: 'pause' }))
+    })
     settingsElements.forEach((element, index) => {
         element.addEventListener('input', (event) => {
             console.log(event.target.value)
@@ -56,6 +59,8 @@ function initTimer() {
 function pushConfig() {
     if (websocket.readyState == WebSocket.OPEN) {
         websocket.send(JSON.stringify({ type: 'config', ...values }))
+    } else {
+        statusNotify({ reason: "Failed to Save Config: Backend Offline" })
     }
 }
 
@@ -64,12 +69,17 @@ async function statusNotify(msg) {
         statusElement.style.color = "green"
         statusElement.textContent = "Saved Successfully"
         await sleep(2000);
-        statusElement.textContent = ""
+        if (statusElement.textContent === "Saved Successfully") {
+            statusElement.textContent = ""
+        }
     } else {
         statusElement.style.color = "red"
         statusElement.textContent = msg.reason
         await sleep(5000);
-        statusElement.textContent = ""
+        if (statusElement.textContent === msg.reason) {
+            statusElement.textContent = ""
+        }
+
     }
 }
 

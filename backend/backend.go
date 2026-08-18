@@ -30,11 +30,13 @@ type Message struct {
 	Remaining int    `json:"remaining,omitempty"`
 	Seconds   int    `json:"seconds,omitempty"`
 	Reason    string `json:"reason,omitempty"`
+	Paused    bool   `json:"paused,omitempty"`
 }
 type State struct {
 	mu        sync.Mutex
 	config    Config
 	remaining int
+	paused    bool
 
 	settingsConn *websocket.Conn
 	overlayConn  *websocket.Conn
@@ -70,8 +72,8 @@ func (s *State) overlayHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			log.Println("Message read error", err)
-			continue
+			log.Println("Overlay Message read error", err)
+			break
 		}
 	}
 }
@@ -125,8 +127,22 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		case "add":
 			s.addTime(msg.Seconds)
 
+		case "pause":
+			s.togglePause()
+
 		}
 	}
+}
+func (s *State) togglePause() {
+	s.mu.Lock()
+	s.paused = !s.paused
+	remaining := s.remaining
+	s.mu.Unlock()
+
+	msg := Message{Type: "updateTimer", Remaining: remaining}
+	s.sendTo(s.overlayConn, msg)
+	s.sendTo(s.settingsConn, msg)
+	log.Println("timer pause status:", s.paused)
 }
 func (s *State) getConfig() {
 	file, err := os.Open(configPath)
@@ -146,16 +162,16 @@ func (s *State) getConfig() {
 func (s *State) runTimer() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-
 	for range ticker.C {
 		s.mu.Lock()
-		if s.remaining > 0 {
+		if s.remaining > 0 && !s.paused {
 			s.remaining--
 			remaining := s.remaining
 			conn := s.overlayConn
 			s.mu.Unlock()
 
-			s.sendTo(conn, Message{Type: "timer", Remaining: remaining})
+			s.sendTo(conn, Message{Type: "updateTimer", Remaining: remaining})
+			log.Println("time remaining: ", s.remaining)
 		} else {
 			s.mu.Unlock()
 		}
@@ -167,7 +183,7 @@ func (s *State) addTime(seconds int) {
 	remaining := s.remaining
 	conn := s.overlayConn
 	s.mu.Unlock()
-	s.sendTo(conn, Message{Type: "timer", Remaining: remaining})
+	s.sendTo(conn, Message{Type: "updateTimer", Remaining: remaining})
 }
 func main() {
 
