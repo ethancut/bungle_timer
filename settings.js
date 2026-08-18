@@ -10,6 +10,7 @@ const keys = ['bits', 'subs', 'donations'];
 const statusElement = document.getElementById('submit-status');
 const timeEntryElement = document.getElementById('time-box');
 const pauseElement = document.getElementById('pause-timer');
+const addTypeElement = document.getElementById('add-type');
 let websocket = null;
 let reconnectDelay = 1000;
 const MAX_RECONNECT_DELAY = 10000;
@@ -35,10 +36,30 @@ function initTimer() {
 
     connect();
     document.getElementById('add-time').addEventListener("click", (event) => {
-        const seconds = parseInt(timeEntryElement.value, 10)
-        if (websocket && websocket.readyState === WebSocket.OPEN && !isNaN(seconds)) {
-            websocket.send(JSON.stringify({ type: "add", seconds: seconds }));
+        const value = parseFloat(timeEntryElement.value, 10)
+        const addType = addTypeElement.value;
+        if (!websocket || websocket.readyState !== WebSocket.OPEN || isNaN(value)) {
+            return;
         }
+        let seconds;
+        switch (addType) {
+            case "seconds":
+                seconds = value;
+                break;
+            case "minutes":
+                seconds = value * 60;
+                break;
+            case "bits":
+                seconds = value * values['bits'];
+                break;
+            case "subs":
+                seconds = value * values['subs'];
+                break;
+            case 'donations':
+                seconds = value * values['donations'];
+                break
+        }
+        websocket.send(JSON.stringify({ type: "add", seconds: Math.round(seconds) }));
     });
     pauseElement.addEventListener("click", (event) => {
         websocket.send(JSON.stringify({ type: 'pause' }))

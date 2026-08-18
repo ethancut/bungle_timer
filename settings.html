@@ -36,8 +36,17 @@
   </div>
   <div class="server-status">
     <h4>Add Time Manually</h4>
-    <input type="text" placeholder="Enter time (seconds)" id="time-box" type="number"
-      oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+    <span>
+      <input type="text" placeholder="Enter time (seconds)" id="time-box" type="number"
+        oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      <select id="add-type">
+        <option value="seconds">x seconds</option>
+        <option value="minutes">x minutes</option>
+        <option value="bits">x hundred bits</option>
+        <option value="subs">x subs</option>
+        <option value="donations">$x donation</option>
+      </select>
+    </span>
     <button id="add-time" class="button-4">Add Time</button>
     <span>
       Backend Status:
