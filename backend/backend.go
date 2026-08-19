@@ -142,6 +142,8 @@ func (s *State) togglePause() {
 	msg := Message{Type: "updateTimer", Remaining: remaining}
 	s.sendTo(s.overlayConn, msg)
 	s.sendTo(s.settingsConn, msg)
+	msg = Message{Type: "togglePause", Paused: s.paused}
+	s.sendTo(s.settingsConn, msg)
 	log.Println("timer pause status:", s.paused)
 }
 func (s *State) getConfig() {
@@ -189,6 +191,7 @@ func main() {
 
 	state := &State{}
 	state.getConfig()
+	state.paused = true
 	http.HandleFunc("/ws/settings", state.settingsHandler)
 	http.HandleFunc("/ws/timer", state.overlayHandler)
 
