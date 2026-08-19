@@ -49,6 +49,7 @@ function connect() {
     websocket = new WebSocket(wsUri)
     websocket.addEventListener('open', (event) => {
         console.log("connected")
+        reconnectDelay = 1000;
         statusNotify({ reason: 'true' })
     })
     websocket.addEventListener('close', (event) => {
