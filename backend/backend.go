@@ -129,7 +129,11 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 
 		case "pause":
 			s.togglePause()
+		case "overlay1":
+			s.overlayConn.WriteJSON((Message{Type: "overlay1", Reason: msg.Reason, Remaining: s.remaining}))
 
+		case "overlay2":
+			s.overlayConn.WriteJSON((Message{Type: "overlay2", Remaining: s.remaining}))
 		}
 	}
 }

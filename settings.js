@@ -11,14 +11,18 @@ const statusElement = document.getElementById('submit-status');
 const timeEntryElement = document.getElementById('time-box');
 const pauseElement = document.getElementById('pause-timer');
 const addTypeElement = document.getElementById('add-type');
+const startdurationElement = document.getElementById('start-duration')
 let websocket = null;
 let reconnectDelay = 1000;
+let startDuration = ""
 const MAX_RECONNECT_DELAY = 10000;
 function isNumeric(str) {
     if (typeof str != "string") return false;
     return !isNaN(str) && !isNaN(parseFloat(str));
 }
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+
 
 function updateConfig(msg) {
     values.bits = msg.bits;
@@ -30,11 +34,49 @@ function updateConfig(msg) {
     validateElements();
 }
 
+function updateStartDurationVisibility() {
+    const selected = document.querySelector('input[name="overlay-format"]:checked');
+    console.log("selected value:", JSON.stringify(selected?.value));
+    const startDurationWrap = document.getElementById('start-duration-wrap');
+    if (!selected || !startDurationWrap) return;
 
+    if (selected.value === 'dur') {
+        startDurationWrap.style.display = 'none';
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify({ type: 'overlay2' }));
+        }
 
+    } else {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify({ type: 'overlay1', reason: startDuration }));
+        }
+        startDurationWrap.style.display = 'inline-block';
+    }
+}
 function initTimer() {
 
     connect();
+
+    document.querySelectorAll('input[name="overlay-format"]').forEach((radio) => {
+        radio.addEventListener('change', updateStartDurationVisibility)
+    });
+    updateStartDurationVisibility();
+    startdurationElement.addEventListener('input', (event) => {
+        startDuration = event.target.value ?? "";
+        console.log("set start dur to", startDuration);
+
+        // also push it live if this format is currently selected
+        const selected = document.querySelector('input[name="overlay-format"]:checked');
+
+        if (selected && websocket && websocket.readyState === WebSocket.OPEN) {
+            if (selected.value === 'dur') {
+                websocket.send(JSON.stringify({ type: 'overlay2', reason: startDuration }));
+            } else if (selected.value === 'start_plus_dur') {
+                websocket.send(JSON.stringify({ type: 'overlay1', reason: startDuration }));
+            }
+        }
+    });
+
     document.getElementById('add-time').addEventListener("click", (event) => {
         const value = parseFloat(timeEntryElement.value, 10)
         const addType = addTypeElement.value;
@@ -110,6 +152,7 @@ function connect() {
     const statusEl = document.getElementById('status');
     websocket.addEventListener('open', (event) => {
         console.log("Connected to WebSocket server");
+        reconnectDelay = 1000;
         document.getElementById('status').textContent = "Connected";
     });
     websocket.addEventListener('message', (event) => {
@@ -124,6 +167,12 @@ function connect() {
             updateConfig(msg)
         } else if (msg.type == "status") {
             statusNotify(msg)
+        } else if (msg.type == "togglePause") {
+            if (msg.paused == true) {
+                pauseElement.textContent = "Unpause Timer"
+            } else {
+                pauseElement.textContent = "Pause Timer"
+            }
         }
     });
     websocket.addEventListener('close', (event) => {

@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="stylesheet.css" />
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="./stylesheet.css" />
+  <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
   <title>Timer Manager</title>
 </head>
 
@@ -30,9 +30,27 @@
 
       </div>
     </div>
-    <div id="submit-status"></div>
     <button id="submit-config" class="button-4">Save</button>
-    <button id="pause-timer" class="button-4">Pause Timer</button>
+    <div id="submit-status"></div>
+    <div style="height: 1px; background-color: rgba(204, 204, 204, 0.35); width: 100%; margin: 10px 0px;"></div>
+    <div style="display: flex; flex-direction: column;">
+      <h4 style="text-align: center;">Overlay Style</h4>
+      <span>
+        <input type="radio" id="start_plus_dur" name="overlay-format" value="start_plus_dur" checked>
+        <label for="start_plus_dur">Starting + Extra (HH:MM + HH:MM:SS)</label><br>
+      </span>
+      <span>
+        <input type="radio" id="dur" name="overlay-format" value="dur">
+        <label for="dur">HH:MM:SS</label><br>
+      </span>
+
+      <span id="start-duration-wrap"
+        style="display: inline-block; text-align: center; margin-top: 10px; font-size: 0.8rem;">Starting
+        Duration:
+        <input type="text" id="start-duration" placeholder="HH:MM" title="" style="font-size: 0.8rem;" />
+      </span>
+    </div>
+    <button id="pause-timer" class="button-4">Start Timer</button>
   </div>
   <div class="server-status">
     <h4>Add Time Manually</h4>
@@ -48,12 +66,12 @@
       </select>
     </span>
     <button id="add-time" class="button-4">Add Time</button>
-    <span>
-      Backend Status:
-      <span id="status" style="margin-left: 0px">Disconnected</span>
-    </span>
   </div>
-  <script src="settings.js"></script>
+  <span class="footer">
+    Backend Status:
+    <span id="status" style="margin-left: 0px">Disconnected</span>
+  </span>
+  <script src="./settings.js"></script>
 </body>
 
 </html>

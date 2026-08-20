@@ -8,6 +8,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let reconnectDelay = 1000;
 let websocket = null
 
+let overlayType = 2
+let startTime = ""
+
 const timerElement = document.getElementById('timer');
 const statusElement = document.getElementById('status');
 
@@ -26,7 +29,12 @@ async function statusNotify(msg) {
 
 function formatSeconds(totalSeconds) {
     if (totalSeconds <= 0 || totalSeconds == null) {
-        return "00:00:00"
+        if (overlayType == 2) {
+            return "00:00:00"
+
+        } else {
+            return startTime + " + 00:00:00"
+        }
     }
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -35,12 +43,17 @@ function formatSeconds(totalSeconds) {
     const hh = String(hours).padStart(2, '0');
     const mm = String(minutes).padStart(2, '0');
     const ss = String(seconds).padStart(2, '0');
+    if (overlayType == 2) {
+        return `${hh}:${mm}:${ss}`;
 
-    return `${hh}:${mm}:${ss}`;
+    } else {
+        return startTime + ` + ${hh}:${mm}:${ss}`
+    }
 }
 
 
 function setTime(seconds) {
+    console.log("setting time")
     timerElement.textContent = formatSeconds(seconds)
 }
 
@@ -66,6 +79,15 @@ function connect() {
         }
         if (msg.type == "updateTimer") {
             console.log("time remaining: ", msg.remaining, " seconds")
+            setTime(msg.remaining)
+        }
+        else if (msg.type == "overlay1") {
+            overlayType = 1
+            startTime = msg.reason || "?"
+            setTime(msg.remaining)
+
+        } else if (msg.type == "overlay2") {
+            overlayType = 2
             setTime(msg.remaining)
         }
     })
