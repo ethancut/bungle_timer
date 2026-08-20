@@ -12,6 +12,9 @@ const timeEntryElement = document.getElementById('time-box');
 const pauseElement = document.getElementById('pause-timer');
 const addTypeElement = document.getElementById('add-type');
 const startdurationElement = document.getElementById('start-duration')
+const seTokenElement = document.getElementById('se-token');
+let streamElementsToken = "";
+
 let websocket = null;
 let reconnectDelay = 1000;
 let startDuration = ""
@@ -31,6 +34,8 @@ function updateConfig(msg) {
     settingsElements[0].value = msg.bits;
     settingsElements[1].value = msg.subs;
     settingsElements[2].value = msg.donations;
+    seTokenElement.value = msg.streamElementsToken
+    streamElementsToken = msg.streamElementsToken
     validateElements();
 }
 
@@ -113,6 +118,10 @@ function initTimer() {
             validateElements();
         });
     });
+
+    seTokenElement.addEventListener('input', (event) => {
+        streamElementsToken = event.target.value;
+    })
     document.getElementById('submit-config').addEventListener('click', (event) => {
         pushConfig();
     })
@@ -121,7 +130,7 @@ function initTimer() {
 }
 function pushConfig() {
     if (websocket.readyState == WebSocket.OPEN) {
-        websocket.send(JSON.stringify({ type: 'config', ...values }))
+        websocket.send(JSON.stringify({ type: 'config', ...values, streamElementsToken }))
     } else {
         statusNotify({ reason: "Failed to Save Config: Backend Offline" })
     }

@@ -18,9 +18,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type Config struct {
-	Bits      int `json:"bits"`
-	Subs      int `json:"subs"`
-	Donations int `json:"donations"`
+	Bits      int    `json:"bits"`
+	Subs      int    `json:"subs"`
+	Donations int    `json:"donations"`
+	SEToken   string `json:"streamElementsToken"`
 }
 type Message struct {
 	Type      string `json:"type"`
@@ -31,6 +32,7 @@ type Message struct {
 	Seconds   int    `json:"seconds,omitempty"`
 	Reason    string `json:"reason,omitempty"`
 	Paused    bool   `json:"paused,omitempty"`
+	SEToken   string `json:"streamElementsToken,omitempty"`
 }
 type State struct {
 	mu        sync.Mutex
@@ -86,7 +88,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.settingsConn = conn
 	cfg := s.config
-	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Donations: cfg.Donations})
+	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Donations: cfg.Donations, SEToken: cfg.SEToken})
 	s.mu.Unlock()
 
 	defer func() {
@@ -107,7 +109,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		switch msg.Type {
 		case "config":
 			s.mu.Lock()
-			s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Donations: msg.Donations}
+			s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Donations: msg.Donations, SEToken: msg.SEToken}
 			var file *os.File = nil
 			if file, err = os.OpenFile(configPath, os.O_CREATE, os.ModePerm); err != nil {
 				log.Println("Error opening config file: ", err)
