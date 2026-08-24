@@ -204,6 +204,7 @@ func main() {
 	http.HandleFunc("/ws/timer", state.overlayHandler)
 
 	go state.runTimer()
+	go connectStreamElements(state)
 	log.Print("Starting server")
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }
