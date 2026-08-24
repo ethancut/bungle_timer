@@ -109,20 +109,22 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		switch msg.Type {
 		case "config":
 			s.mu.Lock()
+			defer s.mu.Unlock()
 			s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Donations: msg.Donations, SEToken: msg.SEToken}
 			var file *os.File = nil
-			if file, err = os.OpenFile(configPath, os.O_CREATE, os.ModePerm); err != nil {
+			if file, err = os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664); err != nil {
 				log.Println("Error opening config file: ", err)
 				conn.WriteJSON((Message{Type: "status", Reason: "Error opening config file"}))
 				break
 			}
+			defer file.Close()
 			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
 			if err := encoder.Encode(s.config); err != nil {
 				log.Println("Error writing config file: ", err)
 				conn.WriteJSON((Message{Type: "status", Reason: "Error writing to config file"}))
 				break
 			}
-			s.mu.Unlock()
 			log.Printf("Config updated: %+v\n", s.config)
 			conn.WriteJSON((Message{Type: "status", Reason: "true"}))
 
