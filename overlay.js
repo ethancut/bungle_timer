@@ -1,4 +1,4 @@
-const MAX_RECONNECT_DELAY = 10000;
+const MAX_RECONNECT_DELAY = 5000;
 const wsUri = "ws://localhost:8080/ws/timer";
 
 const successColor = "rgb(0, 173, 0)";
@@ -97,7 +97,7 @@ function scheduleReconnect() {
     setTimeout(() => {
         console.log(`reconnecting (delay ${reconnectDelay}ms)`);
         connect();
-        reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+        reconnectDelay = Math.min(reconnectDelay + 1000, MAX_RECONNECT_DELAY);
     }, reconnectDelay);
 }
 

@@ -10,8 +10,15 @@
 </head>
 
 <body>
-  <h1 style="text-align: center">Timer Manager</h1>
-  <div class="main-content">
+  <div class="side-nav">
+    <button class="tab-link" id="tab-config" onclick="showTab('config', this)">Config</button>
+    <button class="tab-link" onclick="showTab('appearance', this)">Appearance</button>
+    <button class="tab-link" onclick="showTab('actions', this)">Actions</button>
+  </div>
+  <h1 style="text-align: center;" id="header">Timer Manager</h1>
+  <div style="height: 1px; background-color: rgba(204, 204, 204, 0.35); width: 100%; margin: 10px 0px;"></div>
+
+  <div id="config" class="tab-content">
 
     <div class="container">
       <div class="grid-item">
@@ -20,8 +27,18 @@
           oninput="this.value = this.value.replace(/[^0-9]/g, '') " />
       </div>
       <div class="grid-item">
-        <label for="subs">Seconds per sub</label>
+        <label for="subs">Seconds per Tier 1 sub</label>
         <input id="subs" placeholder="time in seconds" type="number"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      </div>
+      <div class="grid-item">
+        <label for="subs2">Seconds per Tier 2 sub</label>
+        <input id="subs2" placeholder="time in seconds" type="number"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      </div>
+      <div class="grid-item">
+        <label for="subs3">Seconds per Tier 3 sub</label>
+        <input id="subs3" placeholder="time in seconds" type="number"
           oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
       </div>
       <div class="grid-item">
@@ -30,17 +47,23 @@
           oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
 
       </div>
+
     </div>
-    <label for="se-token">StreamElements Token</label>
-    <input type="password" style="width: 200px; text-align: center; margin-top: 3px; " id="se-token"
-      placeholder="Paste StreamElements JWT token" />
-    <p class="hint">
-      <a href="https://streamelements.com/dashboard" target="_blank">Dashboard</a> → click your avatar (top right) →
-      select your channel → copy the JWT token.
-    </p>
+    <div class="tokens">
+      <label for="se-token">StreamElements Token</label>
+      <input type="password" id="se-token" placeholder="Paste StreamElements JWT token" />
+      <p class="hint">
+        <a href="https://streamelements.com/dashboard" target="_blank">Dashboard</a> → click your avatar (top right) →
+        select your channel → copy the JWT token.
+      </p>
+    </div>
     <button id="submit-config" class="button-4">Save</button>
+
     <div id="submit-status"></div>
-    <div style="height: 1px; background-color: rgba(204, 204, 204, 0.35); width: 100%; margin: 10px 0px;"></div>
+  </div>
+
+
+  <div id="appearance" class="tab-content">
     <div style="display: flex; flex-direction: column;">
       <h4 style="text-align: center;">Overlay Style</h4>
       <span>
@@ -58,9 +81,10 @@
         <input type="text" id="start-duration" placeholder="HH:MM" title="" style="font-size: 0.8rem;" />
       </span>
     </div>
-    <button id="pause-timer" class="button-4">Start Timer</button>
+
+
   </div>
-  <div class="server-status">
+  <div id="actions" class="tab-content">
     <h4>Add Time Manually</h4>
     <span>
       <input type="text" placeholder="Enter time (seconds)" id="time-box" type="number"
@@ -74,10 +98,11 @@
       </select>
     </span>
     <button id="add-time" class="button-4">Add Time</button>
+    <button id="pause-timer" class="button-4">Start Timer</button>
   </div>
   <span class="footer">
     Backend Status:
-    <span id="status" style="margin-left: 0px">Disconnected</span>
+    <span id="status">Disconnected</span>
   </span>
   <script src="./settings.js"></script>
 </body>

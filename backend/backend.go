@@ -20,6 +20,8 @@ var upgrader = websocket.Upgrader{
 type Config struct {
 	Bits      int    `json:"bits"`
 	Subs      int    `json:"subs"`
+	Subs2     int    `json:"subs2"`
+	Subs3     int    `json:"subs3"`
 	Donations int    `json:"donations"`
 	SEToken   string `json:"streamElementsToken"`
 }
@@ -27,6 +29,8 @@ type Message struct {
 	Type      string `json:"type"`
 	Bits      int    `json:"bits,omitempty"`
 	Subs      int    `json:"subs,omitempty"`
+	Subs2     int    `json:"subs2,omitempty"`
+	Subs3     int    `json:"subs3,omitempty"`
 	Donations int    `json:"donations,omitempty"`
 	Remaining int    `json:"remaining,omitempty"`
 	Seconds   int    `json:"seconds,omitempty"`
@@ -88,7 +92,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.settingsConn = conn
 	cfg := s.config
-	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Donations: cfg.Donations, SEToken: cfg.SEToken})
+	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Subs2: cfg.Subs2, Subs3: cfg.Subs3, Donations: cfg.Donations, SEToken: cfg.SEToken})
 	s.mu.Unlock()
 
 	defer func() {
@@ -108,26 +112,27 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch msg.Type {
 		case "config":
-			s.mu.Lock()
-			defer s.mu.Unlock()
-			s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Donations: msg.Donations, SEToken: msg.SEToken}
-			var file *os.File = nil
-			if file, err = os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664); err != nil {
-				log.Println("Error opening config file: ", err)
-				conn.WriteJSON((Message{Type: "status", Reason: "Error opening config file"}))
-				break
-			}
-			defer file.Close()
-			encoder := json.NewEncoder(file)
-			encoder.SetIndent("", "  ")
-			if err := encoder.Encode(s.config); err != nil {
-				log.Println("Error writing config file: ", err)
-				conn.WriteJSON((Message{Type: "status", Reason: "Error writing to config file"}))
-				break
-			}
-			log.Printf("Config updated: %+v\n", s.config)
-			conn.WriteJSON((Message{Type: "status", Reason: "true"}))
-
+			func() {
+				s.mu.Lock()
+				defer s.mu.Unlock()
+				s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Subs2: msg.Subs2, Subs3: msg.Subs3, Donations: msg.Donations, SEToken: msg.SEToken}
+				var file *os.File = nil
+				if file, err = os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664); err != nil {
+					log.Println("Error opening config file: ", err)
+					conn.WriteJSON((Message{Type: "status", Reason: "Error opening config file"}))
+					return
+				}
+				defer file.Close()
+				encoder := json.NewEncoder(file)
+				encoder.SetIndent("", "  ")
+				if err := encoder.Encode(s.config); err != nil {
+					log.Println("Error writing config file: ", err)
+					conn.WriteJSON((Message{Type: "status", Reason: "Error writing to config file"}))
+					return
+				}
+				log.Printf("Config updated: %+v\n", s.config)
+				conn.WriteJSON((Message{Type: "status", Reason: "true"}))
+			}()
 		case "add":
 			s.addTime(msg.Seconds)
 

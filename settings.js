@@ -3,10 +3,12 @@ const wsUri = "ws://localhost:8080/ws/settings";
 const settingsElements = [
     document.getElementById('bits'),
     document.getElementById('subs'),
+    document.getElementById('subs2'),
+    document.getElementById('subs3'),
     document.getElementById('donations')
 ];
-const values = { bits: 0, subs: 0, donations: 0 };
-const keys = ['bits', 'subs', 'donations'];
+const values = { bits: 0, subs: 0, subs2: 0, subs3: 0, donations: 0 };
+const keys = ['bits', 'subs', 'subs2', 'subs3', 'donations'];
 const statusElement = document.getElementById('submit-status');
 const timeEntryElement = document.getElementById('time-box');
 const pauseElement = document.getElementById('pause-timer');
@@ -18,7 +20,7 @@ let streamElementsToken = "";
 let websocket = null;
 let reconnectDelay = 1000;
 let startDuration = ""
-const MAX_RECONNECT_DELAY = 10000;
+const MAX_RECONNECT_DELAY = 5000;
 function isNumeric(str) {
     if (typeof str != "string") return false;
     return !isNaN(str) && !isNaN(parseFloat(str));
@@ -30,10 +32,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function updateConfig(msg) {
     values.bits = msg.bits;
     values.subs = msg.subs;
+    values.subs2 = msg.subs2;
+    values.subs3 = msg.subs3;
     values.donations = msg.donations;
     settingsElements[0].value = msg.bits;
     settingsElements[1].value = msg.subs;
-    settingsElements[2].value = msg.donations;
+    settingsElements[2].value = msg.subs2;
+    settingsElements[3].value = msg.subs3;
+    settingsElements[4].value = msg.donations;
     seTokenElement.value = msg.streamElementsToken
     streamElementsToken = msg.streamElementsToken
     validateElements();
@@ -196,7 +202,7 @@ function scheduleReconnect() {
     setTimeout(() => {
         console.log(`reconnecting (delay ${reconnectDelay}ms)`);
         connect();
-        reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+        reconnectDelay = Math.min(reconnectDelay + 1000, MAX_RECONNECT_DELAY);
     }, reconnectDelay);
 }
 function validateElements() {
@@ -208,5 +214,16 @@ function validateElements() {
         }
     }
 }
+function showTab(pageName, element) {
 
+    document.querySelectorAll('.tab-content').forEach((tab) => {
+        tab.style.display = 'none';
+    })
+    document.querySelectorAll('.tab-link').forEach((tablink) => {
+        tablink.style.backgroundColor = "";
+    })
+    document.getElementById(pageName).style.display = "flex";
+    element.style.backgroundColor = '#1c2024';
+}
+showTab('config', document.getElementById('tab-config'));
 initTimer();
