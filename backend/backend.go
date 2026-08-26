@@ -18,12 +18,13 @@ var upgrader = websocket.Upgrader{
 }
 
 type Config struct {
-	Bits      int    `json:"bits"`
-	Subs      int    `json:"subs"`
-	Subs2     int    `json:"subs2"`
-	Subs3     int    `json:"subs3"`
-	Donations int    `json:"donations"`
-	SEToken   string `json:"streamElementsToken"`
+	Bits        int    `json:"bits"`
+	Subs        int    `json:"subs"`
+	Subs2       int    `json:"subs2"`
+	Subs3       int    `json:"subs3"`
+	Donations   int    `json:"donations"`
+	SEToken     string `json:"streamElementsToken"`
+	OverlayType string `json:"type"`
 }
 type Message struct {
 	Type      string `json:"type"`
@@ -64,6 +65,10 @@ func (s *State) overlayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	s.overlayConn = conn
+	s.sendTo(conn, Message{Type: "updateTimer", Remaining: s.remaining})
+	if s.config.OverlayType != "" {
+		s.sendTo(conn, Message{Type: s.config.OverlayType, Remaining: s.remaining})
+	}
 	s.mu.Unlock()
 
 	defer func() {
@@ -139,13 +144,21 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		case "pause":
 			s.togglePause()
 		case "overlay1":
-			s.overlayConn.WriteJSON((Message{Type: "overlay1", Reason: msg.Reason, Remaining: s.remaining}))
+			s.mu.Lock()
+			s.config.OverlayType = "overlay1"
+			s.mu.Unlock()
+			s.sendTo(s.overlayConn, Message{Type: "overlay1", Reason: msg.Reason, Remaining: s.remaining})
 
 		case "overlay2":
-			s.overlayConn.WriteJSON((Message{Type: "overlay2", Remaining: s.remaining}))
+			s.mu.Lock()
+			s.config.OverlayType = "overlay2"
+			s.mu.Unlock()
+			s.sendTo(s.overlayConn, Message{Type: "overlay2", Remaining: s.remaining})
+
 		}
 	}
 }
+
 func (s *State) togglePause() {
 	s.mu.Lock()
 	s.paused = !s.paused

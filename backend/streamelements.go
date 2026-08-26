@@ -142,7 +142,15 @@ func handleStreamElementsMessage(state *State, msg SEMessage) {
 		case "subscriber":
 			log.Printf("Sub: %s (raw: %s)\n", act.Data.Username, string(msg.Data))
 			state.mu.Lock()
-			perUnit := state.config.Subs
+			var perUnit int
+			switch act.Data.Tier {
+			case "1000":
+				perUnit = state.config.Subs
+			case "2000":
+				perUnit = state.config.Subs2
+			case "3000":
+				perUnit = state.config.Subs3
+			}
 			state.mu.Unlock()
 			state.addTime(perUnit)
 
@@ -164,7 +172,15 @@ func handleStreamElementsMessage(state *State, msg SEMessage) {
 			log.Printf("Gift Sub: %s (raw: %s)\n", act.Data.Username, string(msg.Data))
 			amount := act.Data.Amount
 			state.mu.Lock()
-			perUnit := state.config.Subs
+			var perUnit int
+			switch act.Data.Tier {
+			case "1000":
+				perUnit = state.config.Subs
+			case "2000":
+				perUnit = state.config.Subs2
+			case "3000":
+				perUnit = state.config.Subs3
+			}
 			state.mu.Unlock()
 			state.addTime(perUnit * amount)
 		default:
