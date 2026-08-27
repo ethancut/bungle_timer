@@ -1,26 +1,29 @@
 const wsUri = "ws://localhost:8080/ws/settings";
 
-const settingsElements = [
-    document.getElementById('bits'),
-    document.getElementById('subs'),
-    document.getElementById('subs2'),
-    document.getElementById('subs3'),
-    document.getElementById('donations')
-];
-const values = { bits: 0, subs: 0, subs2: 0, subs3: 0, donations: 0 };
-const keys = ['bits', 'subs', 'subs2', 'subs3', 'donations'];
+
+const MAX_RECONNECT_DELAY = 5000;
+
+const bitsElement = document.getElementById('bits');
+const subsElement = document.getElementById('subs');
+const subs2Element = document.getElementById('subs2');
+const subs3Element = document.getElementById('subs3');
+const donationsElement = document.getElementById('donations');
+const startdurationElement = document.getElementById('start-duration')
+const seTokenElement = document.getElementById('se-token');
+
+const timeDurationElements = [bitsElement, subsElement, subs2Element, subs3Element, donationsElement];
+
+const config = { bits: 0, subs: 0, subs2: 0, subs3: 0, donations: 0, streamElementsToken: "", overlayType: "", startDuration: "" };
 const statusElement = document.getElementById('submit-status');
 const timeEntryElement = document.getElementById('time-box');
 const pauseElement = document.getElementById('pause-timer');
 const addTypeElement = document.getElementById('add-type');
-const startdurationElement = document.getElementById('start-duration')
-const seTokenElement = document.getElementById('se-token');
 let streamElementsToken = "";
+let startDuration = ""
 
 let websocket = null;
 let reconnectDelay = 1000;
-let startDuration = ""
-const MAX_RECONNECT_DELAY = 5000;
+
 function isNumeric(str) {
     if (typeof str != "string") return false;
     return !isNaN(str) && !isNaN(parseFloat(str));
@@ -29,23 +32,49 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 
 
-function updateConfig(msg) {
-    values.bits = msg.bits;
-    values.subs = msg.subs;
-    values.subs2 = msg.subs2;
-    values.subs3 = msg.subs3;
-    values.donations = msg.donations;
-    settingsElements[0].value = msg.bits;
-    settingsElements[1].value = msg.subs;
-    settingsElements[2].value = msg.subs2;
-    settingsElements[3].value = msg.subs3;
-    settingsElements[4].value = msg.donations;
-    seTokenElement.value = msg.streamElementsToken
-    streamElementsToken = msg.streamElementsToken
-    validateElements();
+function updateConfigDisplay() {
+    bitsElement.value = config.bits
+    subsElement.value = config.subs
+    subs2Element.value = config.subs2
+    subs3Element.value = config.subs3
+    donationsElement.value = config.donations;
+
+    seTokenElement.value = config.streamElementsToken
+
+    startdurationElement.value = config.startDuration;
+    if (config.overlayType == "overlay1") {
+        document.getElementById('start_plus_dur').checked = true
+    } else {
+        document.getElementById('dur').checked = true
+    }
+    updateStartDurationVisibility(true);
 }
 
-function updateStartDurationVisibility() {
+
+
+function updateConfig(msg) {
+    config.bits = msg.bits;
+    config.subs = msg.subs;
+    config.subs2 = msg.subs2;
+    config.subs3 = msg.subs3;
+    config.donations = msg.donations;
+    config.streamElementsToken = msg.streamElementsToken
+    config.overlayType = msg.overlayType
+    config.startDuration = msg.startDuration ?? ""
+
+    updateConfigDisplay();
+
+    validateElements();
+}
+function pushConfig() {
+    if (websocket.readyState == WebSocket.OPEN) {
+        websocket.send(JSON.stringify({ type: 'config', ...config }))
+    } else {
+        statusNotify({ reason: "Failed to Save Config: Backend Offline" })
+    }
+}
+
+function updateStartDurationVisibility(update) {
     const selected = document.querySelector('input[name="overlay-format"]:checked');
     console.log("selected value:", JSON.stringify(selected?.value));
     const startDurationWrap = document.getElementById('start-duration-wrap');
@@ -53,27 +82,32 @@ function updateStartDurationVisibility() {
 
     if (selected.value === 'dur') {
         startDurationWrap.style.display = 'none';
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-            websocket.send(JSON.stringify({ type: 'overlay2' }));
+        if (update === true) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type: 'overlay2' }));
+            }
         }
 
     } else {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-            websocket.send(JSON.stringify({ type: 'overlay1', reason: startDuration }));
+        if (update === true) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type: 'overlay1', reason: config.startDuration }));
+            }
         }
         startDurationWrap.style.display = 'inline-block';
     }
 }
-function initTimer() {
+function init() {
+    showTab('config', document.getElementById('tab-config'));
 
     connect();
 
     document.querySelectorAll('input[name="overlay-format"]').forEach((radio) => {
-        radio.addEventListener('change', updateStartDurationVisibility)
+        radio.addEventListener('change', () => updateStartDurationVisibility(true));
     });
     updateStartDurationVisibility();
     startdurationElement.addEventListener('input', (event) => {
-        startDuration = event.target.value ?? "";
+        startDuration = event.target.value;
         console.log("set start dur to", startDuration);
 
         // also push it live if this format is currently selected
@@ -82,8 +116,10 @@ function initTimer() {
         if (selected && websocket && websocket.readyState === WebSocket.OPEN) {
             if (selected.value === 'dur') {
                 websocket.send(JSON.stringify({ type: 'overlay2', reason: startDuration }));
+                config.overlayType = 'overlay2';
             } else if (selected.value === 'start_plus_dur') {
                 websocket.send(JSON.stringify({ type: 'overlay1', reason: startDuration }));
+                config.overlayType = 'overlay1'
             }
         }
     });
@@ -103,13 +139,13 @@ function initTimer() {
                 seconds = value * 60;
                 break;
             case "bits":
-                seconds = value * values['bits'];
+                seconds = value * config['bits'];
                 break;
             case "subs":
-                seconds = value * values['subs'];
+                seconds = value * config['subs'];
                 break;
             case 'donations':
-                seconds = value * values['donations'];
+                seconds = value * config['donations'];
                 break
         }
         websocket.send(JSON.stringify({ type: "add", seconds: Math.round(seconds) }));
@@ -117,29 +153,40 @@ function initTimer() {
     pauseElement.addEventListener("click", (event) => {
         websocket.send(JSON.stringify({ type: 'pause' }))
     })
-    settingsElements.forEach((element, index) => {
-        element.addEventListener('input', (event) => {
-            console.log(event.target.value)
-            values[keys[index]] = parseFloat(event.target.value);
-            validateElements();
-        });
+    bitsElement.addEventListener('input', (event) => {
+        config.bits = parseFloat(event.target.value);
+        validateElements();
+    });
+    subsElement.addEventListener('input', (event) => {
+        config.subs = parseFloat(event.target.value);
+        validateElements();
+    });
+    subs2Element.addEventListener('input', (event) => {
+        config.subs2 = parseFloat(event.target.value);
+        validateElements();
+    });
+    subs3Element.addEventListener('input', (event) => {
+        config.subs3 = parseFloat(event.target.value);
+        validateElements();
+    });
+    donationsElement.addEventListener('input', (event) => {
+        config.donations = parseFloat(event.target.value);
+        validateElements();
     });
 
     seTokenElement.addEventListener('input', (event) => {
-        streamElementsToken = event.target.value;
+        config.streamElementsToken = event.target.value;
     })
     document.getElementById('submit-config').addEventListener('click', (event) => {
         pushConfig();
     })
+    startdurationElement.addEventListener('input', (event) => {
+        config.startDuration = event.target.value;
+    })
+
+
 
     validateElements();
-}
-function pushConfig() {
-    if (websocket.readyState == WebSocket.OPEN) {
-        websocket.send(JSON.stringify({ type: 'config', ...values, streamElementsToken }))
-    } else {
-        statusNotify({ reason: "Failed to Save Config: Backend Offline" })
-    }
 }
 
 async function statusNotify(msg) {
@@ -206,8 +253,16 @@ function scheduleReconnect() {
     }, reconnectDelay);
 }
 function validateElements() {
-    for (const element of settingsElements) {
-        if (!isNumeric(element.value)) {
+    for (const element of timeDurationElements) {
+        if (element === seTokenElement) {
+            if (element.value === "") {
+                element.classList.add('invalid-input')
+            } else {
+                element.classList.remove('invalid-input')
+            }
+            continue;
+        }
+        else if (!isNumeric(element.value)) {
             element.classList.add('invalid-input');
         } else {
             element.classList.remove('invalid-input');
@@ -225,5 +280,4 @@ function showTab(pageName, element) {
     document.getElementById(pageName).style.display = "flex";
     element.style.backgroundColor = '#1c2024';
 }
-showTab('config', document.getElementById('tab-config'));
-initTimer();
+init();
