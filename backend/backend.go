@@ -18,26 +18,29 @@ var upgrader = websocket.Upgrader{
 }
 
 type Config struct {
-	Bits        int    `json:"bits"`
-	Subs        int    `json:"subs"`
-	Subs2       int    `json:"subs2"`
-	Subs3       int    `json:"subs3"`
-	Donations   int    `json:"donations"`
-	SEToken     string `json:"streamElementsToken"`
-	OverlayType string `json:"type"`
+	Bits          int    `json:"bits"`
+	Subs          int    `json:"subs"`
+	Subs2         int    `json:"subs2"`
+	Subs3         int    `json:"subs3"`
+	Donations     int    `json:"donations"`
+	SEToken       string `json:"streamElementsToken"`
+	OverlayType   string `json:"type"`
+	StartDuration string `json:"startDuration"`
 }
 type Message struct {
-	Type      string `json:"type"`
-	Bits      int    `json:"bits,omitempty"`
-	Subs      int    `json:"subs,omitempty"`
-	Subs2     int    `json:"subs2,omitempty"`
-	Subs3     int    `json:"subs3,omitempty"`
-	Donations int    `json:"donations,omitempty"`
-	Remaining int    `json:"remaining,omitempty"`
-	Seconds   int    `json:"seconds,omitempty"`
-	Reason    string `json:"reason,omitempty"`
-	Paused    bool   `json:"paused,omitempty"`
-	SEToken   string `json:"streamElementsToken,omitempty"`
+	Type          string `json:"type"`
+	Bits          int    `json:"bits,omitempty"`
+	Subs          int    `json:"subs,omitempty"`
+	Subs2         int    `json:"subs2,omitempty"`
+	Subs3         int    `json:"subs3,omitempty"`
+	Donations     int    `json:"donations,omitempty"`
+	Remaining     int    `json:"remaining,omitempty"`
+	Seconds       int    `json:"seconds,omitempty"`
+	Reason        string `json:"reason,omitempty"`
+	Paused        bool   `json:"paused,omitempty"`
+	SEToken       string `json:"streamElementsToken,omitempty"`
+	OverlayType   string `json:"overlayType,omitempty"`
+	StartDuration string `json:"startDuration,omitempty"`
 }
 type State struct {
 	mu        sync.Mutex
@@ -67,7 +70,11 @@ func (s *State) overlayHandler(w http.ResponseWriter, r *http.Request) {
 	s.overlayConn = conn
 	s.sendTo(conn, Message{Type: "updateTimer", Remaining: s.remaining})
 	if s.config.OverlayType != "" {
-		s.sendTo(conn, Message{Type: s.config.OverlayType, Remaining: s.remaining})
+		if s.config.OverlayType == "overlay1" {
+			s.sendTo(conn, Message{Type: s.config.OverlayType, Remaining: s.remaining, Reason: s.config.StartDuration})
+		} else {
+			s.sendTo(conn, Message{Type: s.config.OverlayType, Remaining: s.remaining})
+		}
 	}
 	s.mu.Unlock()
 
@@ -97,7 +104,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.settingsConn = conn
 	cfg := s.config
-	conn.WriteJSON(Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Subs2: cfg.Subs2, Subs3: cfg.Subs3, Donations: cfg.Donations, SEToken: cfg.SEToken})
+	s.sendTo(conn, Message{Type: "config", Bits: cfg.Bits, Subs: cfg.Subs, Subs2: cfg.Subs2, Subs3: cfg.Subs3, Donations: cfg.Donations, SEToken: cfg.SEToken, OverlayType: s.config.OverlayType, StartDuration: s.config.StartDuration})
 	s.mu.Unlock()
 
 	defer func() {
@@ -120,11 +127,11 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 			func() {
 				s.mu.Lock()
 				defer s.mu.Unlock()
-				s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Subs2: msg.Subs2, Subs3: msg.Subs3, Donations: msg.Donations, SEToken: msg.SEToken}
+				s.config = Config{Bits: msg.Bits, Subs: msg.Subs, Subs2: msg.Subs2, Subs3: msg.Subs3, Donations: msg.Donations, SEToken: msg.SEToken, OverlayType: msg.OverlayType, StartDuration: msg.StartDuration}
 				var file *os.File = nil
 				if file, err = os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664); err != nil {
 					log.Println("Error opening config file: ", err)
-					conn.WriteJSON((Message{Type: "status", Reason: "Error opening config file"}))
+					s.sendTo(conn, Message{Type: "status", Reason: "Error opening config file"})
 					return
 				}
 				defer file.Close()
@@ -132,11 +139,11 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 				encoder.SetIndent("", "  ")
 				if err := encoder.Encode(s.config); err != nil {
 					log.Println("Error writing config file: ", err)
-					conn.WriteJSON((Message{Type: "status", Reason: "Error writing to config file"}))
+					s.sendTo(conn, Message{Type: "status", Reason: "Error writing to config file"})
 					return
 				}
 				log.Printf("Config updated: %+v\n", s.config)
-				conn.WriteJSON((Message{Type: "status", Reason: "true"}))
+				s.sendTo(conn, Message{Type: "status", Reason: "true"})
 			}()
 		case "add":
 			s.addTime(msg.Seconds)
@@ -146,6 +153,7 @@ func (s *State) settingsHandler(w http.ResponseWriter, r *http.Request) {
 		case "overlay1":
 			s.mu.Lock()
 			s.config.OverlayType = "overlay1"
+			s.config.StartDuration = msg.Reason
 			s.mu.Unlock()
 			s.sendTo(s.overlayConn, Message{Type: "overlay1", Reason: msg.Reason, Remaining: s.remaining})
 
